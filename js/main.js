@@ -1977,7 +1977,7 @@ $(document).ready(function(){
 			var padding = false;
 			var segs = [];
 			var qr = qrGen.encodeSegments( segs, qrGen_ecc[ecc], qr_version, qr_version, mask,  false , padding, result_databits.data_bits)
-			qr_temp_array = qr.modules;
+			qr_temp_array = qr.modules.map( x => x.map ( y => y === true ? 1 : 0 ) );
 			patching_after_databits = result_databits.data_bits;
 			console.log ( qr);
 		}
