@@ -165,7 +165,6 @@ var qrcodegen;
 			if (remamining_data_bits != "" ){
 				for (let i = 0; i<remamining_data_bits.length ; i++){
 					 var bit = parseInt(remamining_data_bits.substr(i,1)) ; 
-					 console.log( bit )
 					 appendBits(bit, 1, bb);
 				}
 			}
