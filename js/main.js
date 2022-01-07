@@ -39,6 +39,12 @@ var active_history = -1;								//Current active history
 const maxSupportedSize = 177;    // max is 177 for v40
 const maxVersion = 40;		// max is not 50
 
+var patching_before_databits;
+var patching_after_databits;
+var qrGen = qrcodegen.QrCode;							// project Nayuki QR Generator 
+var qrGen_ecc = [ qrGen.Ecc.MEDIUM, qrGen.Ecc.LOW, qrGen.Ecc.HIGH, qrGen.Ecc.QUARTILE  ];
+
+
 /***
 *
 *	generate QR table based on qr_array
@@ -1065,7 +1071,7 @@ function reedSolomonDecode(data, nysm){
 		if(typeof decoded == "string"){
 			$("#rs-decoder-error").text("ERROR: "+decoded).removeClass("invisible");
 			$("#rs-decoder-output, #rs-decoder-final-msg").val("");
-			return;
+			return  {success: false};
 		}
 		
 		result = result.concat(decoded);
@@ -1088,8 +1094,9 @@ function reedSolomonDecode(data, nysm){
 	else {
 		$("#rs-decoder-error").text("ERROR: Data can't be readed").removeClass("invisible");
 		$("#rs-decoder-final-msg").val("");
+		return {success: false}
 	}
-
+	return { success: true , data_bits: data_bits   } ;
 }
 
 function showQRTableOverlay(){
@@ -1936,13 +1943,17 @@ $(document).ready(function(){
 		var html = "";
 
 		var data_array = JSON.stringify(qr_array);
-		var rs_block = QRDecode(JSON.parse(data_array)).rs_block;
+		var qrdecoded = QRDecode(JSON.parse(data_array));
+		var rs_block = qrdecoded.rs_block;
 
 		for(var i=1; i <= nblocks; i++){
 			html += "<h5>Encoded Reed-Solomon blocks ["+i+"] : </h5>\
 					<input type='text' class='rs-decoder-input' id='rs-decoder-input-"+i+"' value='"+rs_block[i-1].replace(/[^0-9,]/g, "")+"'>\
 					<div class='clear'></div>";
 		}
+
+		patching_before_databits = qrdecoded.data_bits;
+
 		$("#rs-decoder-page-1 div").html(html);
 	})
 
@@ -1954,14 +1965,25 @@ $(document).ready(function(){
 		
 		var rs_blocks = [];
 		var ecc = getFormatInfo(qr_array).ecc;
+		var mask = getFormatInfo(qr_array).mask;
 		var nysm = error_correction_code_table[qr_version-1][ecc];
 		$(this).hide();
 		$(".rs-decoder-input").each(function(){
 			rs_blocks.push($(this).val().replace(/[^0-9,]+/g, "").split(","));
 		})
 		
-		reedSolomonDecode(rs_blocks, nysm);
-		
+		var result_databits = reedSolomonDecode(rs_blocks, nysm);
+		if (result_databits.success ){
+			var padding = false;
+			var segs = [];
+			var qr = qrGen.encodeSegments( segs, qrGen_ecc[ecc], qr_version, qr_version, mask,  false , padding, result_databits.data_bits)
+			qr_temp_array = qr.modules;
+			patching_after_databits = result_databits.data_bits;
+			console.log ( qr);
+		}
+		else {
+			$("#btn-rs-decoder-apply").hide();
+		}
 	})
 
 	$("#btn-rs-decoder-prev").click(function(){
@@ -1971,8 +1993,19 @@ $(document).ready(function(){
 	})
 
 	$("#btn-rs-decoder-apply").click(function(){
+		$("#div-rs-decoder").hide();
+-
+		patchingRecovery( { result_array: qr_temp_array , before: patching_before_databits, after: patching_after_databits});
+		refreshTable();
+		updateHistory("RS Decoder recovery");
+		$("#btn-rs-decoder-apply").hide();
+		$("#div-patching-recovery-title").text("RS Decoder Recovery");
+		$("#div-patch-rec-warning").hide();
+		$("#div-patching-recovery").show();
 
+		changed_state =	true;
 	})
+
 
 	/****************************
 		Data Sequence Analysis
