@@ -1912,7 +1912,7 @@ $(document).ready(function(){
 		$("#div-tools").hide();
 	})
 
-	$("#btn-patching-rec-apply").click(function(){
+	$("#btn-patch-rec-apply").click(function(){
 		qr_array = JSON.parse(JSON.stringify(qr_temp_array));
 		refreshTable();
 		updateHistory( $("#div-patching-recovery-title").val() );
@@ -1920,7 +1920,7 @@ $(document).ready(function(){
 		changed_state = true;
 	})
 
-	$("#btn-patching-rec-cancel").click(function(){
+	$("#btn-patch-rec-cancel").click(function(){
 		$("#div-patching-recovery").hide();
 	})
 
