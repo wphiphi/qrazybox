@@ -131,7 +131,7 @@ var qrcodegen;
         // This function allows the user to create a custom sequence of segments that switches
         // between modes (such as alphanumeric and byte) to encode text in less space.
         // This is a mid-level API; the high-level API is encodeText() and encodeBinary().
-        static encodeSegments(segs, ecl, minVersion = 1, maxVersion = 40, mask = -1, boostEcl = true) {
+        static encodeSegments(segs, ecl, minVersion = 1, maxVersion = 40, mask = -1, boostEcl = true , terminator_and_padding = true,  remamining_data_bits = "" ) {
             if (!(QrCode.MIN_VERSION <= minVersion && minVersion <= maxVersion && maxVersion <= QrCode.MAX_VERSION)
                 || mask < -1 || mask > 7)
                 throw "Invalid value";
@@ -140,7 +140,7 @@ var qrcodegen;
             let dataUsedBits;
             for (version = minVersion;; version++) {
                 const dataCapacityBits = QrCode.getNumDataCodewords(version, ecl) * 8; // Number of data bits available
-                const usedBits = QrSegment.getTotalBits(segs, version);
+                const usedBits = QrSegment.getTotalBits(segs, version) + remamining_data_bits.length;
                 if (usedBits <= dataCapacityBits) {
                     dataUsedBits = usedBits;
                     break; // This version number is found to be suitable
@@ -161,20 +161,31 @@ var qrcodegen;
                 for (const b of seg.getData())
                     bb.push(b);
             }
+
+			if (remamining_data_bits != "" ){
+				for (let i = 0; i<remamining_data_bits.length ; i++){
+					 var bit = parseInt(remamining_data_bits.substr(i,1)) ; 
+					 console.log( bit )
+					 appendBits(bit, 1, bb);
+				}
+			}
             if (bb.length != dataUsedBits)
                 throw "Assertion error";
-            // Add terminator and pad up to a byte if applicable
-            const dataCapacityBits = QrCode.getNumDataCodewords(version, ecl) * 8;
-            if (bb.length > dataCapacityBits)
-                throw "Assertion error";
-            appendBits(0, Math.min(4, dataCapacityBits - bb.length), bb);
-            appendBits(0, (8 - bb.length % 8) % 8, bb);
-            if (bb.length % 8 != 0)
-                throw "Assertion error";
-            // Pad with alternating bytes until data capacity is reached
-            for (let padByte = 0xEC; bb.length < dataCapacityBits; padByte ^= 0xEC ^ 0x11)
-                appendBits(padByte, 8, bb);
-            // Pack bits into bytes in big endian
+            
+			if (terminator_and_padding){
+				// Add terminator and pad up to a byte if applicable
+				const dataCapacityBits = QrCode.getNumDataCodewords(version, ecl) * 8;
+				if (bb.length > dataCapacityBits)
+					throw "Assertion error";
+				appendBits(0, Math.min(4, dataCapacityBits - bb.length), bb);
+				appendBits(0, (8 - bb.length % 8) % 8, bb);
+				if (bb.length % 8 != 0)
+					throw "Assertion error";
+				// Pad with alternating bytes until data capacity is reached
+				for (let padByte = 0xEC; bb.length < dataCapacityBits; padByte ^= 0xEC ^ 0x11)
+					appendBits(padByte, 8, bb);
+ 			}
+           // Pack bits into bytes in big endian
             let dataCodewords = [];
             while (dataCodewords.length * 8 < bb.length)
                 dataCodewords.push(0);
@@ -182,6 +193,7 @@ var qrcodegen;
             // Create the QR Code object
             return new QrCode(version, ecl, dataCodewords, mask);
         }
+
         /*-- Accessor methods --*/
         // Returns the color of the module (pixel) at the given coordinates, which is false
         // for light or true for dark. The top left corner has the coordinates (x=0, y=0).
