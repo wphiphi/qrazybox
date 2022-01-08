@@ -1996,8 +1996,6 @@ $(document).ready(function(){
 		$("#div-rs-decoder").hide();
 -
 		patchingRecovery( { result_array: qr_temp_array , before: patching_before_databits, after: patching_after_databits});
-		refreshTable();
-		updateHistory("RS Decoder recovery");
 		$("#btn-rs-decoder-apply").hide();
 		$("#div-patching-recovery-title").text("RS Decoder Recovery");
 		$("#div-patch-rec-warning").hide();
