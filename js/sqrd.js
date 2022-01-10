@@ -666,167 +666,47 @@ function recoverPaddingBits(data_array){
 	var mask_pattern = format_info.mask;
 	var is_data_module = getDataModule(data_array);
 	var data = maskData(data_array, mask_pattern);
-	var total_codewords = data_code_num_table[version - 1][error_correction_level] * 8;
-
+	
 	var pad_byte = ["11101100","00010001"];
 
 	var blocks = [];
     var block = "";
-    count = 0;
-    var x = width - 1;
-    var y = width - 1;
-    while(true){
-        if(x < 0 || y < 0)
-            break;
-        if(is_data_module[x][y]){
-            if(data[x][y] == -1)
-            	block += '?';
-            else
-            	block += data[x][y];
-            count += 1;
-            if(count == 8){
-                blocks.push(block);
-                block = "";
-                count = 0;
-            }
-        }
-        if(y < 7) tx = y; else tx = y - 1;
-        if(tx % 2 == 1)
-       		y -= 1;
-        else {
-            if(Math.floor(tx / 2) % 2 == 1){
-                if(x == 0)
-                    y -= 1;
-                else {
-                    x -= 1;
-                    y += 1;
-                }
-            }
-            else {
-                if(x == width - 1){
-                    if(Math.floor(tx / 2) == 3) y -= 1;
-                    y -= 1;
-                } else {
-                    x += 1;
-                    y += 1;
-                }
-            }
-        }
-    }
 
-    var block_num = RS_block_num_table[version - 1][error_correction_level];
-    var offset = data_code_num_table[version - 1][error_correction_level];
-    var data_blocks = "";
-    
-    console.log(JSON.stringify(blocks));
-    for(var i=0; i < block_num; i++){
-    	var t = [];
-    	for(var j=0; j < Math.floor(offset/block_num); j++){
-    		t.push(blocks[j * block_num + i]);
-    	}
-    	if(offset % block_num != 0){
-    		var remain = offset % block_num;
-    		if((block_num - remain) <= i){
-                t.push(blocks[Math.floor(offset / block_num) * block_num + (i - (block_num - remain))]);
-            }
-    	}
-    	data_blocks += t.join("");
-    }
+	//use QRDecode to get databits
+	var result_temp = QRDecode(data_array);
+    	var data_bits = result_temp.data_bits;
+	
+	var modelist = [ "0100", "0010", "0001", "0000"];
+    	var original_data_bits = "";
+	var first = true;
 
-    var data_bits = data_blocks;
-    var original_data_bits = "";
-    var first = true;
+    	var encoding_mode = "AUTO";
+	var stop = false;
+	var offset = 0;
+    	while(data_bits.length > 0 && ! stop){
+		result_temp = lookAheadSegment(data_bits, version, encoding_mode);
 
-    while(data_bits.length != 0){
-    	var encoding_mode = data_bits.substring(0,4);
-
-    	if(encoding_mode == "0001"){
-    		var length_indicator = 10;
-			if ( version > 9 && version <= 26 ){
-				 length_indicator = 12;
-			} else if ( version > 26 ){
-				 length_indicator = 14;
+		if ( result_temp.success &&  result_temp.decoded_mode != "0000"  ) {
+			encoding_mode = "AUTO";
+			original_data_bits += data_bits.substring(0,result_temp.offset)
+			data_bits = result_temp.data_bits;
+			offset += result_temp.offset;
+		}
+		else if ( result_temp.decoded_mode == "0000"  )
+		{
+			stop = true;
+			if (encoding_mode != "AUTO" ) {
+				//forced
+				original_data_bits += data_bits.substring(0,result_temp.offset)
+				data_bits = result_temp.data_bits;
+				offset += result_temp.offset + 4;
 			}
-		
-    		if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
-    			return "ERROR: Unknown Character Count Indicator";
-
-    		var character_count = parseInt(data_bits.substring(4,4+length_indicator), 2);
-    		if(character_count % 3 == 0){
-    			var offset = (character_count/3)*10;
-    		} else if(character_count % 3 == 1) {
-    			var offset = ((character_count-2)/3)*10;
-    			offset += 7;
-    		} else {
-    			var offset = ((character_count-1)/3)*10;
-    			offset += 4;
-    		}
-    		offset += 4+length_indicator;
-
-    	} else if(encoding_mode == "0010"){
-     		var length_indicator = 9;
-			if ( version > 9 && version <= 26 ){
-				 length_indicator = 11;
-			} else if ( version > 26 ){
-				 length_indicator = 13;
-			}
-    		if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
-    			return "ERROR: Unknown Character Count Indicator";
-
-	    	var character_count = parseInt(data_bits.substring(4,4+length_indicator), 2);
-    		if(character_count % 2 == 0){
-    			var offset = (character_count/2)*11;
-    		} else {
-    			var offset = ((character_count-1)/2)*11;
-    			offset += 6;
-    		}
-    		offset += 4+length_indicator;
-
-	    } else if(encoding_mode == "0100"){
-     		var length_indicator = 8;
-			if ( version > 9 ){
-				 length_indicator = 16;
-			}
-			if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
-    			return "ERROR: Unknown Character Count Indicator";
-
-	    	var character_count = parseInt(data_bits.substring(4,4+length_indicator), 2);
-    		var offset = character_count*8;
-    		offset += 4+length_indicator;
-
-    	} else if(encoding_mode == "1000"){
-    		if(data_bits.substring(4,12).search(/\?/g) != -1)
-    			return "ERROR: Unknown Character Count Indicator";
-
-    		var character_count = parseInt(data_bits.substring(4,12), 2);
-    		var offset = character_count*13;
-    		offset += 12;
-
-		} else if(encoding_mode == "0111"){
-
-			if(data_bits.substring(4,5) == "0"){
-				offset += 12;
-			} else if(data_bits.substring(4,6) == "10"){
-				offset += 20;
-			} else if(data_bits.substring(4,7) == "110"){
-				offset += 28;
-			} else {
-				return "ERROR: Invalid ECI Assignment Number";
-			}
-			
-
-    	} else if(encoding_mode == "0000"){
-    		break;
-    	} else {
-    		if(first)
-    			return "ERROR: Unknown Encoding Mode";
-    		else
-    			break;
-    	}
-    	original_data_bits += data_bits.substring(0,offset);
-    	data_bits = data_bits.substring(offset);
-    	first = false;
-    }
+		}
+		else {
+			//retry with forced encoding mode 0000 (it trigger a padding search in lookAheadSegment)
+			encoding_mode = "0000";
+		}
+	}
 
 	var target_bits = data_bits;
 	if(target_bits == "" || target_bits.length < 8){
