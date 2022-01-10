@@ -1061,174 +1061,85 @@ function QRDecode(data){
     result.mode = [];
     result.count = [];
     result.decoded = [];
-    while(data_bits.length != 0){
-    	mode = parseInt(data_bits.substring(0,4), 2);
-    	var temp_data = "["+data_bits.substring(0,4)+"] ";
-    	data_bits = data_bits.substring(4);
 
-    	if(mode == 0b0001){
-    		var length_indicator = 10;
-		if ( version > 9 && version <= 26 ){
-			 length_indicator = 12;
-		} else if ( version > 26 ){
-			 length_indicator = 14;
+
+	result.segs = [];
+	var encoding_mode = "AUTO";
+	
+	lastmode = 0;
+	retry = 0;
+	mode = 0; /// 
+	segCount = 1;
+
+	stop = false ;
+    while(data_bits.length != 0 && stop !=  true){
+    	var temp_data ;
+
+		result_temp = lookAheadSegment(data_bits, version, encoding_mode);
+		temp_data = "";
+
+		console.log("LookAheadSegment " + segCount  + " : ", result_temp );
+
+		if ( result_temp.success == true &&  result_temp.decoded_mode != "0000"  ) {
+
+			if ( result_temp.decoded_mode != "0111"  ){  // NOT ECI
+				temp_data += "["+ result_temp.decoded_mode + "][" + result_temp.count_bits + "][" + result_temp.decoded_bits + "]";
+			}
+			else { 
+				temp_data += "["+ result_temp.decoded_mode + "][" + result_temp.decoded_bits + "]";
+			}
+
+			console.log("Data length : ",result_temp.count);
+    		console.log("Data sequence : ", temp_data.replace( "/\[|\]/g" ,"") );
+
+			result.mode.push(result_temp.mode);
+    		result.count.push(result_temp.count);
+
+			result.decoded.push(result_temp.decoded);
+			data.push(result_temp.decoded);
+
+			result.data_bits_block.push(temp_data);
+			result.data_bits_count += 1;
+
+			result.segs.push(result_temp);
+
+			//advance to remaining
+			data_bits = result_temp.data_bits;
+
+		}
+		else{ 
+			// unknow, encoding or  terminating encoding 0000
+			stop = true;
+
+			if ( result_temp.decoded_mode == "0000" ) {
+				result.mode.push("Terminating mode (" + result_temp.decoded_mode + ")");
+				result.count.push("1110110000010001 is Expected Padding ");
+				result.data_bits_block.push(temp_data);
+				result.data_bits_count += 1;
+
+				result.segs.push(result_temp);
+				data_bits = result_temp.data_bits;
+				result.decoded.push( data_bits.match(/(.{1,16})/g).join("\n"));
+			}
+			else {
+				result.error.push("Invalid Encoding mode [" + result_temp.decoded_mode  + "] in [segment " + segCount + "]" );
+
+				result.mode.push("Invalid Encoding mode (" + result_temp.decoded_mode + ")");
+				result.count.push("");
+
+				result.data_bits_block.push(temp_data);
+				result.data_bits_count += 1;
+
+				result.segs.push(result_temp);
+
+				data_bits = result_temp.data_bits;
+				result.decoded.push(data_bits.match(/(.{1,8})/g).join(" "));
+			}
 		}
 
-    		var num = "";
-    		length = parseInt(data_bits.substring(0, length_indicator), 2);
-    		temp_data += "["+data_bits.substring(0, length_indicator)+"] [";
-    		data_bits = data_bits.substring(length_indicator);
-    		console.log("Data length : ",length);
-    		console.log("Data sequence : ",data_bits);
-
-    		result.mode.push("Numeric Mode (0001)");
-    		result.count.push(length);
-
-    		for(var i=0; i < Math.floor((length + 2) / 3); i++){
-    			if(i == Math.floor((length + 2) / 3) - 1){
-    				if(length % 3 == 0){
-    					num += parseInt(data_bits.substring(0,10), 2);
-    					temp_data += data_bits.substring(0,10);
-                    	data_bits = data_bits.substring(10);
-    				} else if(length % 3 == 1){
-    					num += parseInt(data_bits.substring(0,4), 2);
-    					temp_data += data_bits.substring(0,4);
-                    	data_bits = data_bits.substring(4);
-    				} else {
-    					num += parseInt(data_bits.substring(0,7), 2);
-    					temp_data += data_bits.substring(0,7);
-                    	data_bits = data_bits.substring(7);
-    				}
-    			} else {
-    				num += parseInt(data_bits.substring(0,10), 2);
-    				temp_data += data_bits.substring(0,10);
-                    data_bits = data_bits.substring(10);
-    			}
-    		}
-    		temp_data += "]";
-    		result.decoded.push(num);
-
-    		data.push.apply(data, num.split(""));
-
-    	} else if(mode == 0b0010){
-    		var length_indicator = 9;
-		if ( version > 9 && version <= 26 ){
-			 length_indicator = 11;
-		} else if ( version > 26 ){
-			 length_indicator = 13;
-		}
-
-    		var current_data = "";
-    		length = parseInt(data_bits.substring(0, length_indicator), 2);
-    		temp_data += "["+data_bits.substring(0, length_indicator)+"] [";
-    		data_bits = data_bits.substring(length_indicator);
-    		console.log("Data length : ",length);
-    		console.log("Data sequence : ",data_bits);
-
-    		result.mode.push("Alphanumeric Mode (0010)");
-    		result.count.push(length);
-
-    		for(var i=0; i < Math.floor((length + 1) / 2); i++){
-    			if(i == Math.floor((length + 1) / 2) - 1){
-    				if(length % 2 == 0){
-    					num = (parseInt(data_bits.substring(0,11), 2));
-    					temp_data += data_bits.substring(0,11);
-                    	data_bits = data_bits.substring(11);
-                    	data.push(alphanumeric_table[Math.floor(num / 45)]);
-    					data.push(alphanumeric_table[num % 45]);
-    					current_data += alphanumeric_table[Math.floor(num / 45)];
-    					current_data += alphanumeric_table[Math.floor(num % 45)];
-    				} else {
-    					num = (parseInt(data_bits.substring(0,6), 2));
-    					temp_data += data_bits.substring(0,6);
-                    	data_bits = data_bits.substring(6);
-                    	data.push(alphanumeric_table[num]);
-                    	current_data += alphanumeric_table[num];
-    				}
-    			} else {
-    				num = (parseInt(data_bits.substring(0,11), 2));
-    				temp_data += data_bits.substring(0,11);
-                    data_bits = data_bits.substring(11);
-                    data.push(alphanumeric_table[Math.floor(num / 45)]);
-    				data.push(alphanumeric_table[num % 45]);
-    				current_data += alphanumeric_table[Math.floor(num / 45)];
-    				current_data += alphanumeric_table[Math.floor(num % 45)];
-    			}
-    		}
-    		temp_data += "]";
-    		result.decoded.push(current_data);
-
-    	} else if(mode == 0b0100){
-    		var length_indicator = 8;
-		if ( version > 9 ){
-			 length_indicator = 16;
-		}
-
-    		var current_data = "";
-    		length = parseInt(data_bits.substring(0, length_indicator), 2);
-    		temp_data += "["+data_bits.substring(0, length_indicator)+"] [";
-    		data_bits = data_bits.substring(length_indicator);
-    		console.log("Data length : ",length);
-    		console.log("Data sequence : ",data_bits);
-
-    		result.mode.push("8-bit Mode (0100)");
-    		result.count.push(length);
-
-    		for(var i=0; i < length; i++){
-    			data.push(String.fromCharCode(parseInt(data_bits.substring(0,8), 2)));
-    			temp_data += data_bits.substring(0,11);
-    			current_data += String.fromCharCode(parseInt(data_bits.substring(0,8), 2));
-    			data_bits = data_bits.substring(8);
-    		}
-    		temp_data += "]";
-    		result.decoded.push(current_data);
-    	} else if(mode == 0b0000){
-    		break;
-    	} else if(mode == 0b1000){
-    		//TODO: Kanji mode
-    		break;
-		} else if(mode == 0b0111){
-			// ECI Mode
-			result.mode.push("ECI Mode (0111)");
-
-			if(data_bits.substring(0,1) == "0"){
-
-				temp_data += "["+data_bits.substring(0, 8)+"]";
-				special_encoding = parseInt(data_bits.substring(0,8), 2);
-				data_bits = data_bits.substring(8);
-
-				result.count.push(special_encoding);
-				result.decoded.push(getExtendedEncoding(special_encoding));
-
-			} else if(data_bits.substring(0,2) == "10"){
-
-				temp_data += "["+data_bits.substring(0, 16)+"]";
-				special_encoding = parseInt(data_bits.substring(0,16), 2);
-				data_bits = data_bits.substring(16);
-
-				result.count.push(special_encoding);
-				result.decoded.push(getExtendedEncoding(special_encoding));
-			} else if(data_bits.substring(0,3) == "110"){
-
-				temp_data += "["+data_bits.substring(0, 24)+"]";
-				special_encoding = parseInt(data_bits.substring(0,24), 2);
-				data_bits = data_bits.substring(24);
-
-				result.count.push(special_encoding);
-				result.decoded.push(getExtendedEncoding(special_encoding));
-			} else {
-				console.log("[ERROR]: Invalid ECI Assignment Number");
-				result.error.push("[ERROR]: Invalid ECI Assignment Number");
-				break;
-		}
-    	} else {
-    		console.log("[ERROR]: Invalid Encoding mode", mode);
-    		result.error.push("Invalid Encoding mode");
-    		break;
-    	}
-    	result.data_bits_block.push(temp_data);
-    	result.data_bits_count += 1;
+		segCount ++;
     }
+
     console.log(data.join(""));
 
     result.message = data.join("");
