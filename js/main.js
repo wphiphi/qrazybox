@@ -850,10 +850,11 @@ function extractInfo(){
 			<div class=\"space\"></div>";
 
 	for(var i=0; i < result.data_bits_count; i++){
+		html += "<hr/><h5>Segment " + (i+1) + "</h5>";
 		html += "<h5><span>"+result.data_bits_block[i]+"</span></h5>\
 			<h5>Mode Indicator : <span>"+result.mode[i]+"</span></h5>\
 			<h5>Character Count Indicator : <span>"+result.count[i]+"</span></h5>\
-			<h5>Decoded data : <span>"+result.decoded[i]+"</span></h5>\
+			<h5>Decoded data : <textarea  readonly class=\"\" id=\"result-field-"+ i + "\" >"+result.decoded[i]+"</textarea><button class=\"\" id=\"btn-sqrd-patch-"+	i +	"\">Patch</button></h5>\
 			<div class=\"space\"></div>";
 	}
 
