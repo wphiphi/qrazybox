@@ -345,6 +345,318 @@ function maskData(data_array, mask_pattern){
 	return data;
 }
 
+// return next segment
+function lookAheadSegment(data_bits, version, mode ){
+	var forced = false;
+
+	var offset = 0;
+	var length_indicator ;
+	
+	var encoding_mode;
+	var mode_info;
+	var character_count = 0;
+	var character_count_bits;
+	var decoded_data;
+	var decoded_data_bits;
+	var success = true;
+	
+	var idx=0;
+
+	if (data_bits.length >= 4){
+
+    	encoding_mode = data_bits.substring(0,4);
+		if (mode != "AUTO" ){
+			// check if forced or not
+			if ( encoding_mode != mode )
+			{
+				encoding_mode = mode ;
+				forced = true; 
+			}
+
+		}
+
+		//phi : length_indicator from https://www.thonky.com/qr-code-tutorial/data-encoding
+
+    	if(encoding_mode == "0001"){     //NUMERIC
+    		length_indicator = 10;
+			if ( version > 9 && version <= 26 ){
+				 length_indicator = 12;
+			} else if ( version > 26 ){
+				 length_indicator = 14;
+			}
+
+    		if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
+    			return "ERROR: Unknown Character Count Indicator";
+
+	    	character_count_bits = data_bits.substring(4,4+length_indicator);
+	    	character_count = parseInt(character_count_bits, 2);
+
+			var num = "";
+    		length = character_count ;
+    		idx = 4 + length_indicator ;
+
+    		console.log("Data length : ",length);
+    		console.log("Data sequence : ",data_bits.substring(idx));
+
+			mode_info = "Numeric Mode (0001)";
+
+    		for(var i=0; i < Math.floor((length + 2) / 3); i++){
+    			if(i == Math.floor((length + 2) / 3) - 1){
+    				if(length % 3 == 0){
+    					num += parseInt(data_bits.substring(0,10), 2);
+                    	idx+=10;
+    				} else if(length % 3 == 1){
+    					num += parseInt(data_bits.substring(0,4), 2);
+                    	idx+=4;
+    				} else {
+    					num += parseInt(data_bits.substring(0,7), 2);
+                    	idx+=7;
+    				}
+    			} else {
+    				num += parseInt(data_bits.substring(0,10), 2);
+                    idx+=10;
+				}
+    		}
+			offset = idx;
+    		decoded_data=num;
+			decoded_data_bits = data_bits.substring( 4+length_indicator , offset );
+
+    	} else if(encoding_mode == "0010"){ //ALPHANUMERIC
+    		length_indicator = 9;
+			if ( version > 9 && version <= 26 ){
+				 length_indicator = 11;
+			} else if ( version > 26 ){
+				 length_indicator = 13;
+			}
+
+    		if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
+    			return "ERROR: Unknown Character Count Indicator";
+
+	    	character_count_bits = data_bits.substring(4,4+length_indicator);
+	    	character_count = parseInt(character_count_bits, 2);
+
+			var current_data = "";
+    		length = character_count;
+			idx = 4 + length_indicator;
+
+    		console.log("Data length : ",length);
+    		console.log("Data sequence : ",data_bits.substring(idx));
+
+			mode_info = "Alphanumeric Mode (0010)";
+   
+
+    		for(var i=0; i < Math.floor((length + 1) / 2); i++){
+    			if(i == Math.floor((length + 1) / 2) - 1){
+    				if(length % 2 == 0){
+    					num = (parseInt(data_bits.substring(idx, idx+11), 2));
+                    	idx +=11;
+    					current_data += alphanumeric_table[Math.floor(num / 45)];
+    					current_data += alphanumeric_table[Math.floor(num % 45)];
+    				} else {
+    					num = (parseInt(data_bits.substring(idx, idx+6), 2));
+						idx+=6;
+                    	current_data += alphanumeric_table[num];
+    				}
+    			} else {
+    				num = (parseInt(data_bits.substring(idx,idx+11), 2));
+					idx+=11;
+    				current_data += alphanumeric_table[Math.floor(num / 45)];
+    				current_data += alphanumeric_table[Math.floor(num % 45)];
+    			}
+    		}
+
+			offset = idx;
+			decoded_data = current_data;
+			decoded_data_bits = data_bits.substring( 4+length_indicator , offset );
+
+
+	    } else if(encoding_mode == "0100"){ //BYTE
+    		length_indicator = 8;
+			if ( version > 9 ){
+				 length_indicator = 16;
+			}
+
+    		if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
+    			return "ERROR: Unknown Character Count Indicator";
+
+	    	character_count_bits = data_bits.substring(4,4+length_indicator);
+	    	character_count = parseInt(character_count_bits, 2);
+			
+			
+			var current_data = "";
+    		length = character_count;
+			idx = 4 + length_indicator;
+
+    		console.log("Data length : ",length);
+    		console.log("Data sequence : ",data_bits.substring(idx));
+
+    		mode_info = "Byte Mode (0100)";
+
+    		for(var i=0; i < length; i++){
+				byte_val = parseInt(data_bits.substring(idx,idx+8), 2);
+				// if ascii non printable correct  
+				if (byte_val <  33 || 
+					(byte_val >  126  && byte_val < 161 ) )
+				{ 
+						//current_data += "CHAR(" + byte_val + ")" ;
+						current_data +=String.fromCharCode(byte_val) ;
+				}
+				else {
+					current_data += String.fromCharCode(byte_val);
+				}
+    			idx+=8;
+    		}
+			offset = idx;
+			decoded_data = current_data;
+			decoded_data_bits = data_bits.substring( 4+length_indicator , offset );
+
+
+		} else if(encoding_mode == "1000"){   //KANJI
+
+			//phi
+    		length_indicator = 8;
+			if ( version > 9 && version <= 26 ){
+				 length_indicator = 10;
+			} else if ( version > 26 ){
+				 length_indicator = 12;
+			}
+    		
+			if(data_bits.substring(4,4+length_indicator).search(/\?/g) != -1)
+    			return "ERROR: Unknown Character Count Indicator";
+
+ 	    	character_count_bits = data_bits.substring(4,4+length_indicator);
+	    	character_count = parseInt(character_count_bits, 2);
+
+			
+
+			var current_data = "";
+    		length = character_count;
+			idx = 4 + length_indicator;
+
+    		console.log("Data length : ",length);
+    		console.log("Data sequence : ",data_bits.substring(idx));
+
+    		mode_info = "Kanji Shift-JIS Mode (1000)";
+
+    		for(var i=0; i < length; i++){
+				kanji = parseInt(data_bits.substring(idx,idx+13), 2);
+				
+				// based on jsqrcode/databr.js 
+				var lowerByte = kanji % 0xC0;
+				var higherByte = kanji / 0xC0;
+				
+				var tempWord = (higherByte << 8) + lowerByte;
+				var shiftjisWord = 0;
+				if (tempWord + 0x8140 <= 0x9FFC) {
+					// between 8140 - 9FFC on Shift_JIS character set
+					shiftjisWord = tempWord + 0x8140;
+				}
+				else {
+					// between E040 - EBBF on Shift_JIS character set
+					shiftjisWord = tempWord + 0xC140;
+				}
+				current_data += String.fromCharCode(shiftjisWord); //phi <<<<<PROBABLY ERRONOUS
+				idx+=13;
+    		}
+			offset = idx;
+			decoded_data = current_data;
+			decoded_data_bits = data_bits.substring( 4+length_indicator , offset );
+
+
+		} else if(encoding_mode == "0111"){ // ECI
+
+			// ECI Mode
+			mode_info = "ECI Mode (0111)";
+			idx = 4;
+
+			//no length indicator
+
+			if(data_bits.substring(idx, idx+1) == "0"){
+				special_encoding = parseInt(data_bits.substring(idx,idx+8), 2);
+				idx+=8;
+
+				//result.decoded.push(getExtendedEncoding(special_encoding));
+				mode_info += " Extented Character Encoding is " + getExtendedEncoding(special_encoding);
+
+			} else if(data_bits.substring(idx, idx+2) == "10"){
+				special_encoding = parseInt(data_bits.substring(idx,idx+16), 2);
+				idx+=16;
+
+				//result.decoded.push(getExtendedEncoding(special_encoding));
+				mode_info += " Extented Character Encoding is " + getExtendedEncoding(special_encoding);
+			} else if(data_bits.substring(idx, idx+3) == "110"){
+				special_encoding = parseInt(data_bits.substring(idx,idx+24), 2);
+				idx+=24;
+
+				//result.decoded.push(getExtendedEncoding(special_encoding));
+				mode_info += " Extented Character Encoding is " + getExtendedEncoding(special_encoding);
+			} else {
+				console.log("[ERROR]: Invalid ECI Assignment Number");
+				//result.error.push("[ERROR]: Invalid ECI Assignment Number");
+			}
+
+			offset = idx;
+			//no decoded data 
+			decoded_data = ""
+			decoded_data_bits = data_bits.substring( 4 , offset );
+
+    	} else if(encoding_mode == "0000"){ //TERMINATOR
+			//no op
+			
+			var pad_byte = ["11101100","00010001"];
+
+			var search_pad_pos = data_bits.search( "0000"+pad_byte[0]); 
+			console.log("search padding :", search_pad_pos);
+			//verify that pad_bytes is behind (only if there is enough padding
+			if ( search_pad_pos  > 16 ) {
+				console.log("padding does not start directly after , it start at ", search_pad_pos )
+				if (forced) {
+					//in forced mode , return the real starting padding position
+					offset = search_pad_pos;
+				}
+				else {
+					success = false;
+					offset = 0;
+				}
+			}
+			else if ( search_pad_pos == -1)
+			{
+				success = false;
+				offset = 0; 
+				console.log( "no padding found");
+			} else {
+				offset += 4;
+			}
+			
+    	} else {
+				//phi NEED FIX <<<<<<<<<<<<  there will be additional bits ?
+				console.log("lookAhead encoding mode error ", encoding_mode);
+				success=false;
+				offset = 0;
+    	}
+
+		if (forced)	{
+			if (offset > data_bits.length )		{
+				offset = 0; 
+				success=false;
+
+			}
+			else 
+				data_bits = data_bits.substring(offset);
+
+		}
+		else {
+			data_bits = data_bits.substring(offset);
+		}
+		console.log("mode select ", mode , " encoding_mode" , encoding_mode , "offset lookAhead : " , offset , " forced " , forced);
+    }
+	else
+		throw "Unespected ending look ahead";
+
+	return {success: success, decoded_mode: encoding_mode, data_bits:data_bits, offset:offset, count:character_count, count_bits:character_count_bits, mode:mode_info, decoded:decoded_data , decoded_bits: decoded_data_bits };
+}
+
+
 function recoverPaddingBits(data_array){
 
 	var width = data_array.length;
