@@ -367,15 +367,13 @@ function lookAheadSegment(data_bits, version, mode ){
     	encoding_mode = data_bits.substring(0,4);
 		if (mode != "AUTO" ){
 			// check if forced or not
-			if ( encoding_mode != mode )
-			{
+			if ( encoding_mode != mode ) {
 				encoding_mode = mode ;
 				forced = true; 
 			}
-
 		}
 
-		//phi : length_indicator from https://www.thonky.com/qr-code-tutorial/data-encoding
+		//length_indicator from https://www.thonky.com/qr-code-tutorial/data-encoding
 
     	if(encoding_mode == "0001"){     //NUMERIC
     		length_indicator = 10;
@@ -444,7 +442,6 @@ function lookAheadSegment(data_bits, version, mode ){
 
 			mode_info = "Alphanumeric Mode (0010)";
    
-
     		for(var i=0; i < Math.floor((length + 1) / 2); i++){
     			if(i == Math.floor((length + 1) / 2) - 1){
     				if(length % 2 == 0){
@@ -482,7 +479,6 @@ function lookAheadSegment(data_bits, version, mode ){
 	    	character_count_bits = data_bits.substring(4,4+length_indicator);
 	    	character_count = parseInt(character_count_bits, 2);
 			
-			
 			var current_data = "";
     		length = character_count;
 			idx = 4 + length_indicator;
@@ -513,7 +509,6 @@ function lookAheadSegment(data_bits, version, mode ){
 
 		} else if(encoding_mode == "1000"){   //KANJI
 
-			//phi
     		length_indicator = 8;
 			if ( version > 9 && version <= 26 ){
 				 length_indicator = 10;
@@ -526,8 +521,6 @@ function lookAheadSegment(data_bits, version, mode ){
 
  	    	character_count_bits = data_bits.substring(4,4+length_indicator);
 	    	character_count = parseInt(character_count_bits, 2);
-
-			
 
 			var current_data = "";
     		length = character_count;
@@ -554,8 +547,8 @@ function lookAheadSegment(data_bits, version, mode ){
 				else {
 					// between E040 - EBBF on Shift_JIS character set
 					shiftjisWord = tempWord + 0xC140;
-				}
-				current_data += String.fromCharCode(shiftjisWord); //phi <<<<<PROBABLY ERRONOUS
+				} 
+				current_data += String.fromCharCode(shiftjisWord); // TODO <<<<<PROBABLY ERRONOUS need encoding converion
 				idx+=13;
     		}
 			offset = idx;
@@ -565,7 +558,6 @@ function lookAheadSegment(data_bits, version, mode ){
 
 		} else if(encoding_mode == "0111"){ // ECI
 
-			// ECI Mode
 			mode_info = "ECI Mode (0111)";
 			idx = 4;
 
@@ -619,8 +611,7 @@ function lookAheadSegment(data_bits, version, mode ){
 					offset = 0;
 				}
 			}
-			else if ( search_pad_pos == -1)
-			{
+			else if ( search_pad_pos == -1){
 				success = false;
 				offset = 0; 
 				console.log( "no padding found");
@@ -629,7 +620,6 @@ function lookAheadSegment(data_bits, version, mode ){
 			}
 			
     	} else {
-				//phi NEED FIX <<<<<<<<<<<<  there will be additional bits ?
 				console.log("lookAhead encoding mode error ", encoding_mode);
 				success=false;
 				offset = 0;
@@ -639,7 +629,6 @@ function lookAheadSegment(data_bits, version, mode ){
 			if (offset > data_bits.length )		{
 				offset = 0; 
 				success=false;
-
 			}
 			else 
 				data_bits = data_bits.substring(offset);
