@@ -569,7 +569,7 @@ function saveProject(projectName){
 *	Load project from LocalStorage
 *	
 ***/
-function loadProject(name){
+function loadProject(name, target = "main" ){
 	if(changed_state){
 		if(!confirm("Are you sure want to proceed?\nYour unsaved progress will be lost!"))
 			return;
@@ -577,9 +577,19 @@ function loadProject(name){
 	var loadedData = JSON.parse(localStorage.getItem("saveData_"+name));
 	qr_version = loadedData[1];
 	qr_size = 17+(qr_version*4);
-	generateTable(qr_version);
-	qr_array = loadedData[0];
-	qr_format_array = loadedData[2];
+	if (target == "temp"){
+		if (qr_version != loadedData[1] ) {
+			qr_temp_array = null;
+			return;
+		}
+		qr_temp_array = loadedData[0];
+	} else {
+		qr_version = loadedData[1];
+		qr_size	= 17+(qr_version*4);
+		generateTable(qr_version);
+		qr_array = loadedData[0];
+		qr_format_array	= loadedData[2];
+	}
 	brute_force_mode = false;
 	$("#tools-brute-force, #tools-unmasking").removeClass("active");
 	refreshTable();
@@ -596,8 +606,11 @@ function loadProject(name){
 	}
 	$("#box-tools-masking").hide();
 	$("#qr-overlay").html("");
-	clearHistory();
-	updateHistory("Load project");
+	if (target != "temp"){
+		clearHistory();
+		updateHistory("Load project");
+	}
+
 }
 
 /***
@@ -1011,9 +1024,9 @@ function patchingRecovery(result){
 		for(var j=0; j < result.result_array[i].length; j++){
 			if(qr_array[i][j] != result.result_array[i][j]){
 				if(result.result_array[i][j] == 0)
-					elem += "<td class='green white'></td>";
+					elem += "<td class='bit removed'></td>";
 				else if(result.result_array[i][j] == 1)
-					elem += "<td class='green black'></td>";
+					elem += "<td class='bit added'></td>";
 				else
 					elem += "<td></td>";
 			} else {
@@ -1588,6 +1601,22 @@ $(document).ready(function(){
 		}
 	})
 
+	$(document).on("click",	"#list-compare div", function(e){
+		var projectName = $(this).find("h5").text();
+		if(e.target.nodeName !=	"SPAN"){
+			loadProject(projectName,"temp");
+			$("#div-compare").hide();
+			if (qr_temp_array != null ){
+				patchingRecovery( { result_array: qr_temp_array , before: "", after: ""});
+				$("#div-patching-recovery-title").text("Compare with " + projectName);
+				$("#div-patch-rec-warning").show();
+				$("#div-patching-recovery").show();
+			} else
+				alert("Comparing different QR size");
+		} 
+	})
+
+	
 	$(document).on("click", "#list-save div", function(e){
 		var projectName = $(this).find("h5").text();
 		if(e.target.nodeName != "SPAN"){
