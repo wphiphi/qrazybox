@@ -1852,6 +1852,68 @@ $(document).ready(function(){
 	})
 
 	/****************************
+		QR Extract Patching
+	****************************/
+
+	$("#sqrd-patch-decodemsg").keyup(function() {
+		  $("#sqrd-patch-decodemsg-length").text(this.value.length);
+		  if (this.value.length != parseInt($("#sqrd-patch-length").val()) ){
+			$("#btn-sqrd-patch-apply").hide();
+		  }
+		  else {
+			$("#btn-sqrd-patch-apply").show();
+		  }
+	});
+
+	$("#sqrd-patch-mode-select").change(function() {
+		var new_mode = $(this).val();
+		var current_segment = parseInt(  $("#sqrd-patch-seg-number").text() ) - 1  ;
+		var previous_segment = ( current_segment - 1 >= 0 ?  current_segment - 1  : 0 );
+
+		$("#sqrd-patch-mode").val( new_mode);
+
+		if (previous_segment > 0 ) {
+			result.segs[current_segment] = lookAheadSegment( result.segs[ current_segment - 1 ].data_bits,qr_version, new_mode )
+		}
+		else {
+			result.segs[current_segment] = result_temp = lookAheadSegment( result.data_bits,qr_version, new_mode )
+		}
+
+		console.log( result.segs[current_segment] );
+		patchSegment(current_segment);
+
+		//phi TRIGGER an new SQRD parsing of the new QR and reload those value.
+
+		
+	});
+
+
+	//TODO <<< VERIFY COUNT_BITS based on (MODE,VERSION ) 
+	$("#sqrd-patch-length-bit").keypress( function(event) {
+		let keycode = (event.keyCode ? event.keyCode : event.which);
+		var current_segment = parseInt(  $("#sqrd-patch-seg-number").text() ) - 1  ;
+
+		if (keycode == 13 )  {//ENTER
+			var current_segment = parseInt(  $("#sqrd-patch-seg-number").text() ) - 1  ;
+			var new_count_bits = $("#sqrd-patch-length-bit").val();
+			result.segs[current_segment].count_bits = new_count_bits;
+			var new_count = parseInt(  $("#sqrd-patch-length-bit").val(), 2  ) ; 
+			 $("#sqrd-patch-length").val( new_count );
+			
+			//don't trucate $("#sqrd-patch-decodemsg").val( result.segs[current_segment].decoded.substring(0, new_count) );
+			//better RIGGER an new SQRD parsing of the new QR and reload those value.
+			var header =  $("#sqrd-patch-mode").val() + $("#sqrd-patch-length-bit").val() ;
+
+
+			result.segs[current_segment] = lookAheadSegment( header + result.segs[current_segment - 1].data_bits.substring(header.length) , qr_version, $("#sqrd-patch-mode").val() ) 
+			patchSegment(current_segment);
+
+	
+		}
+		
+	});
+	
+	/****************************
 		Brute-force Format info
 	****************************/
 	$("#tools-brute-force").click(function(){
