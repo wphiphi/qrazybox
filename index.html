@@ -31,6 +31,7 @@
 			<a id="menu-new" href="javascript:void(0);"><h4>New</h4></a>
 			<a id="menu-load" href="javascript:void(0);"><h4>Load</h4></a>
 			<a id="menu-save" href="javascript:void(0);"><h4>Save</h4></a>
+			<a id="menu-compare" href="javascript:void(0);"><h4>Compare</h4></a>
 			<a id="menu-tools" href="javascript:void(0);"><h4>Tools</h4></a>
 			<a id="menu-help" href="help/index.html" target="_blank"><h4>Help</h4></a>
 			<a id="menu-about" href="javascript:void(0);" onclick="$('#div-about').show();"><h4>About</h4></a>
@@ -306,6 +307,22 @@
 	</div>
 	<!-- END LOAD OVERLAY -->
 
+	<!-- START COMPARE OVERLAY -->
+	<div class="overlay hide" id="div-compare">
+	<center>
+		<div class="box">
+		<h3>Compare with</h3>
+		<div class="space"></div>
+		<div class="project-list" id="list-compare">
+			
+		</div>
+		<div class="space"></div>
+		<button onclick="$('#div-compare').hide();">Close</button>
+		</div>
+	</center>
+	</div>
+	<!-- END COMPARE OVERLAY -->
+
 	<!-- START ABOUT OVERLAY -->
 	<div class="overlay hide" id="div-about">
 	<center>
@@ -546,6 +563,44 @@
 		</center>
 	</div>
 	<!-- END PATCHING BITS RECOVERY OVERLAY -->
+
+	<!-- START SQRD PATCH SEGMENT -->
+	<div class="overlay hide" id="div-sqrd-patch">
+	<center>
+		<div class="box">
+			<h3>SQR Decoder - Patch Segment <span id="sqrd-patch-seg-number"></span></h3>
+			<div class="space"></div>
+			<h5>Mode Indicator: </h5>
+			<input class="left" id="sqrd-patch-mode" readonly></input><select class="" id="sqrd-patch-mode-select">
+				<option value="0001">Numeric Mode (0001)</option>
+				<option value="0010">Alphanumeric Mode (0010)</option>
+				<option value="0100">Byte Mode (0100)</option>
+				<option value="1000">Kanji Mode (1000)</option>
+				<option value="0111">ECI Mode (0111)</option>
+				<option value="0000">Terminating Mode (0000)</option>
+			</select>
+			<div class="clear"></div>
+			<h5>Characters Count Indicator: </h5>
+			<input class="left" id="sqrd-patch-length-bit"><input class="left" id="sqrd-patch-length"></input><button id="sqrd-patch-length-minus">-</button><button id="sqrd-patch-length-plus">+</button><!--button id="sqrd-patch-length-">set</button-->
+			<div class="clear"></div>
+			<h5>Decoded Message : </h5>
+			<textarea id="sqrd-patch-decodemsg" spellcheck="false" style="width: 100%; margin: 0;" ></textarea>
+			<p>Message lenght:<span id="sqrd-patch-decodemsg-length"></span></p>
+			<div class="clear"></div>
+			<div id="div-decode-error" class="hide">
+				<h5>Error : </h5>
+				<input id="decode-error" type="text" readonly>
+			</div>
+			<div class="clear"></div>
+			<div class="space"></div>
+			<!--button class="center">Switch to Bit Edit Mode</button-->
+			<button class="right" onclick="$('#div-sqrd-patch').hide();">Cancel</button>
+			<button class="right" id="btn-sqrd-patch-apply">Apply</button>
+			<div class="clear"></div>
+		</div>
+	</center>
+	</div>
+	<!-- START SQRD PATCH SEGMENT -->
 
 	<!-- START WARNING OVERLAY -->
 	<div class="warning hide">
