@@ -1588,6 +1588,20 @@ $(document).ready(function(){
 		}
 	})
 
+	$("#menu-compare").click(function(){
+		$("#div-compare").show();
+		var dataList = JSON.parse(localStorage.getItem("dataList"));
+		if(dataList == undefined){
+			$("#list-compare").html("<h5>There's no saved project in Local Storage.</h5>");
+		} else {
+			var element = "";
+			for(var	i=0; i < dataList.length; i++){
+				element	+= "<div><h5>"+dataList[i][0]+"</h5><h6>"+dataList[i][1]+"</h6><span>&#10006;<span></div>";
+			}
+			$("#list-compare").html(element);
+		}
+	})
+
 	$("#menu-tools").click(function(){
 		$("#div-tools").show();
 	})
