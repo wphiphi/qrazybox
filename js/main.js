@@ -821,6 +821,32 @@ function clearHistory(){
 
 /***
 *
+*	patchSegment number 
+*	
+***/
+function patchSegment( segment_number){
+
+	console.log("recalculating : ", result.segs[segment_number] )
+	$("#sqrd-patch-seg-number").text( parseInt(segment_number) + 1);
+	
+	$("#sqrd-patch-mode").val(result.segs[segment_number].decoded_mode);
+	$("#sqrd-patch-mode-select").val(result.segs[segment_number].decoded_mode);
+	
+	$("#sqrd-patch-length-bit").val( result.segs[segment_number].count_bits);
+	$("#sqrd-patch-length").val( result.segs[segment_number].count);
+
+	$("#sqrd-patch-length-minus").val( result.segs[segment_number].count);
+
+	$("#sqrd-patch-decodemsg-length").text( result.segs[segment_number].count );
+	$("#sqrd-patch-decodemsg").val( result.segs[segment_number].decoded);
+	
+	$("#div-sqrd-patch").show();
+
+}
+
+
+/***
+*
 *	Display information text result in Extract QR Information tool and
 *	load it to #div-extract
 *	
@@ -879,6 +905,13 @@ function extractInfo(){
 		}
 	}
 	$("#div-extract").html(html);
+
+	for(var	i=0; i < result.data_bits_count; i++){
+		$("#btn-sqrd-patch-" +i).click(function (){
+			patchSegment( (this.id.split("-"))[3] )
+		}) 
+	}
+
 }
 
 var brute_result = [];
