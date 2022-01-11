@@ -343,6 +343,14 @@ ul {list-style: none;}
 	background-color: #1b5e20;
 }
 
+.qr-tab tr td.bit.removed {
+	background-color: #ff6600;
+}
+
+.qr-tab tr td.bit.added {
+	background-color: #33ff66;
+}
+
 #qr-overlay {
 	position: absolute;
 	top: 0;
