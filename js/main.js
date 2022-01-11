@@ -1055,6 +1055,8 @@ function patchingRecovery(result){
 	if(warning){
 		$("#div-patch-rec-warning").show();
 		$("#div-patch-rec-warning textarea").val("There's are " + warning +" modules conflict with the already known module of original QR code. Correction may fail.")
+	} else {
+		$("#btn-patch-rec-apply").hide();
 	}
 
 	$("#patch-rec-before").val(result.before);
