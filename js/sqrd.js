@@ -401,17 +401,17 @@ function lookAheadSegment(data_bits, version, mode ){
     		for(var i=0; i < Math.floor((length + 2) / 3); i++){
     			if(i == Math.floor((length + 2) / 3) - 1){
     				if(length % 3 == 0){
-    					num += parseInt(data_bits.substring(0,10), 2);
+    					num += parseInt(data_bits.substring(idx, idx+10), 2);
                     	idx+=10;
     				} else if(length % 3 == 1){
-    					num += parseInt(data_bits.substring(0,4), 2);
+    					num += parseInt(data_bits.substring(idx, idx+4), 2);
                     	idx+=4;
     				} else {
-    					num += parseInt(data_bits.substring(0,7), 2);
+    					num += parseInt(data_bits.substring(idx, idx+7), 2);
                     	idx+=7;
     				}
     			} else {
-    				num += parseInt(data_bits.substring(0,10), 2);
+    				num += parseInt(data_bits.substring(idx, idx+10), 2);
                     idx+=10;
 				}
     		}
