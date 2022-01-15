@@ -548,11 +548,12 @@ function lookAheadSegment(data_bits, version, mode ){
 					// between E040 - EBBF on Shift_JIS character set
 					shiftjisWord = tempWord + 0xC140;
 				} 
-				current_data += String.fromCharCode(shiftjisWord); // TODO <<<<<PROBABLY ERRONOUS need encoding converion
+				current_data += String.fromCodePoint(shiftjisWord >> 8, shiftjisWord & 0xFF );
 				idx+=13;
     		}
 			offset = idx;
-			decoded_data = current_data;
+			decoded_data =  Encoding.convert(current_data, {  to: 'UNICODE', from: 'AUTO' ,  type: 'string' });
+			console.log( "Detected Encoding.js type :" +  Encoding.detect(current_data) );
 			decoded_data_bits = data_bits.substring( 4+length_indicator , offset );
 
 
