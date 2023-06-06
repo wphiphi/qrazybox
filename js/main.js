@@ -10,6 +10,8 @@ var APP_VERSION = '0.4.0';
 
 var qr_version = 1;										//Current QR version (1-9)
 var qr_pixel_size = 10;									//Current view size of QR code (pixel per module)
+var qr_pixel_size_togglesave =	10;						//Last toggle view size	of QR code (pixel per module)
+
 var qr_size = 17+(qr_version*4);						//Current size of QR code
 
 var qr_array = [];										//Main array to store QR data
@@ -33,8 +35,8 @@ var is_data_module = [];								//Store data that separate between data module a
 var history_array = [];									//Store history information and its qr_array data
 var active_history = -1;								//Current active history
 
-const maxSupportedSize = 100;
-const maxVersion = 50;
+const maxSupportedSize = 177;    // max is 177 for v40
+const maxVersion = 40;		// max is not 50
 
 /***
 *
@@ -42,7 +44,15 @@ const maxVersion = 50;
 *	
 ***/
 function generateTable(version){
-	qr_array = JSON.parse(JSON.stringify(qr_templates[version-1]));
+	qr_array = JSON.parse(JSON.stringify(generate_qr(version)));
+	if (version > 9 && version <= 20){
+		qr_pixel_size = 5;
+	} else if (version > 20 && version <=35){
+		qr_pixel_size = 2;
+	} else if (version > 35 ){
+		qr_pixel_size = 1;
+	}
+	
 	changed_state = false;
 
 	var element = "";
@@ -292,17 +302,30 @@ function getInfoBits(){
 ***/
 function generateResult(){
 
-	var c = document.getElementById("qr-result");
-	var size = 17+(qr_version*4);
-	c.width = qr_pixel_size*size;
+	var	c =	document.getElementById("qr-result");
+	var	size = 17+(qr_version*4);
+	var	ctx	= c.getContext("2d");
+
+	c.width	= qr_pixel_size*size;
 	c.height = qr_pixel_size*size;
-	var ctx = c.getContext("2d");
-	ctx.fillStyle = "#000";
 	
-	for(var i=0; i < qr_array.length; i++){
-		for(var j=0; j < qr_array[i].length; j++){
-			var x = qr_pixel_size*j;
-			var y = qr_pixel_size*i;
+	// add quiet zone border and white fill
+	c.width	+= (qr_pixel_size*4) * 2;
+	c.height +=	(qr_pixel_size*4) *	2;
+	ctx.fillStyle =	"#fff";
+	ctx.fillRect(0,0,c.width,c.height);
+
+	ctx.fillStyle =	"#000";
+	
+	for(var	i=0; i < qr_array.length; i++){
+		for(var	j=0; j < qr_array[i].length; j++){
+			var	x =	qr_pixel_size*j;
+			var	y =	qr_pixel_size*i;
+			
+			//shift due to quiet zone 
+			x += qr_pixel_size*4;
+			y += qr_pixel_size*4;
+
 			if(qr_array[i][j] == 1){
 				ctx.fillStyle = "#000";
 				ctx.fillRect(x,y,qr_pixel_size,qr_pixel_size);
@@ -359,6 +382,12 @@ function toggleResult(){
 		$(".mode-indicator button").removeClass("active");
 		$("#mobile-decode-mode").addClass("active");
 
+		//resize for decode ( minimum 2px module width needed for standard device decoding )
+		qr_pixel_size_togglesave = qr_pixel_size;
+		if (qr_pixel_size == 1 ) 	{
+			$("#btn-size-plus").trigger("click");
+		}
+
 		generateResult();
 		$("#btn-switch-mode").addClass("active");
 		$("#div-tool-work, #box-history").hide();
@@ -379,6 +408,18 @@ function toggleResult(){
 		$(".mode-indicator button").removeClass("active");
 		$("#mobile-editor-mode").addClass("active");
 
+		//restore to previous encode mode pixel size
+		if (qr_pixel_size - qr_pixel_size_togglesave >= 0){
+			for (i = qr_pixel_size - qr_pixel_size_togglesave  ; i > 0 ; i-- ){
+				$("#btn-size-min").trigger("click");
+			}
+		}
+		else {
+			for (i = qr_pixel_size_togglesave - qr_pixel_size  ; i > 0 ; i-- ){
+				$("#btn-size-plus").trigger("click");
+			}
+		}
+		
 		$("#qr-result").hide();
 		$(".qr-tab").show();	
 		$("#btn-switch-mode").removeClass("active");
@@ -909,6 +950,8 @@ function recoverPadding(){
 		}
 		elem += "</tr>";
 		$("#qr-dummy").append(elem);
+		resize(qr_pixel_size);
+
 	}
 
 	for(var i=0; i < result.after.length; i++){
@@ -1552,6 +1595,8 @@ $(document).ready(function(){
 			decodeFromBase64(image, function(decodedData){
 				if(decodedData != "error decoding QR Code"){
 					$("#decode-message").val(decodedData);
+					//resize for text based on QR version
+					$("#decode-message").css("height", (17+4*qr_version)*3+"px");
 				}
 			});
 		}
